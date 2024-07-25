@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Location Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+		#map-container {
+			position: relative;  /* Container for map and button */
+			height: 100vh;
+			width: 100vw;
+		}
+		#map { 
+			height: 100%; 
+			width: 100%; 
+		}
+		#sendNotification {
+			position: absolute;
+			top: 10px;
+			left: 50px;
+			background-color: #E53671;
+			border: none;
+			color: white;
+			padding: 10px 20px;
+			text-align: center;
+			text-decoration: none;
+			display: inline-block;
+			font-size: 28px;
+			border-radius: 30px;  /* Oval shape */
+			cursor: pointer;
+			z-index: 1000;  /* Ensure it's above the map */
+		}
+		#sendNotification2 {
+			position: absolute;
+			top: 75px;
+			left: 50px;
+			background-color: #E53671;
+			border: none;
+			color: white;
+			padding: 10px 20px;
+			text-align: center;
+			text-decoration: none;
+			display: inline-block;
+			font-size: 18px;
+			border-radius: 10px;  /* Oval shape */
+			cursor: pointer;
+			z-index: 999;  /* Ensure it's above the map */
+		}
+		
+	</style>
+</head>
+
+<body>
+
+<div id="map-container">
+    <div id="map"></div>
+    <button id="sendNotification">Update Loges Location</button>
+	<button id="sendNotification2">Laure you are my best friend. You are so beautiful and such a fun, silly person. I love you so deeply!</button>
+</div>
+
+<script>
+    var socket = io.connect('https://' + document.domain + ':' + location.port);
+    var map = L.map('map'); // Initialization moved to fetchLatestLocation
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 20,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    var customIcon = L.icon({
+        iconUrl: '/static/pink-marker.png',  // Make sure the path here is accessible from your HTML file
+        iconSize: [52, 84],          // These are example sizes, adjust as needed
+        iconAnchor: [26, 84],        // Adjust these values to position the anchor of the marker
+        popupAnchor: [-13, -21]       // Adjust if you have a popup
+    });
+
+    var marker;
+
+    function fetchLatestLocation() {
+        $.get('/get_latest_location', function(data) {
+            var lat = parseFloat(data.latitude);
+            var lon = parseFloat(data.longitude);
+            map.setView([lat, lon], 17);
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            marker = L.marker([lat, lon], {icon: customIcon}).addTo(map);
+        });
+    }
+
+    // Fetch the latest location when the page loads
+    fetchLatestLocation();
+
+    // Listen for 'new_location' events from the server
+    socket.on('new_location', function(data) {
+        console.log(data);
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        marker = L.marker([data.lat, data.lon], {icon: customIcon}).addTo(map);
+        map.setView([data.lat, data.lon], 17);
+    });
+
+    // Send notification button click event
+    $('#sendNotification').click(function() {
+        $.post('/send_notification', function(data) {
+            console.log(data.status);
+        });
+    });
+</script>
+
+</body>
+</html>
