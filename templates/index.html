@@ -9,7 +9,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         #map-container {
-            position: relative;  /* Container for map and button */
+            position: relative;  /* Container for map and buttons */
             height: 100vh;
             width: 100vw;
         }
@@ -17,25 +17,8 @@
             height: 100%; 
             width: 100%; 
         }
-        #sendNotification {
+        .updateButton {
             position: absolute;
-            top: 10px;
-            left: 50px;
-            background-color: #E53671;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 28px;
-            border-radius: 30px;  /* Oval shape */
-            cursor: pointer;
-            z-index: 1000;  /* Ensure it's above the map */
-        }
-        #sendNotification2 {
-            position: absolute;
-            top: 75px;
             left: 50px;
             background-color: #E53671;
             border: none;
@@ -45,9 +28,10 @@
             text-decoration: none;
             display: inline-block;
             font-size: 18px;
-            border-radius: 10px;  /* Oval shape */
+            border-radius: 10px;  /* Rounded shape */
             cursor: pointer;
-            z-index: 999;  /* Ensure it's above the map */
+            z-index: 1000;  /* Ensure it's above the map */
+            margin-top: 10px;
         }
         #duration {
             position: absolute;
@@ -69,55 +53,117 @@
 
 <div id="map-container">
     <div id="map"></div>
-    <button id="sendNotification">Update Logan's Location</button>
-    <button id="sendNotification2">Hello World!</button>
-    <div id="duration">Distance from house: N/A</div>
+    <!-- Buttons to update specific locations -->
+    <button id="sendNotification" class="updateButton">Update Logan's Location</button>
+    <button id="sendNotification2" class="updateButton" style="top: 75px;">Update Alice's Location</button>
+    <div id="duration">Distance from home: N/A</div>
 </div>
 
 <script>
+    // Initialize Socket.IO
     var socket = io.connect('https://' + document.domain + ':' + location.port);
-    var map = L.map('map'); // Initialization moved to fetchLatestLocation
-
+    
+    // Initialize the map
+    var map = L.map('map').setView([0, 0], 2); // Default view
+    
+    // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 20,
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
-
-    var marker;
-
-    function fetchLatestLocation() {
-        $.get('/get_latest_location', function(data) {
-            var lat = parseFloat(data.latitude);
-            var lon = parseFloat(data.longitude);
-            map.setView([lat, lon], 17);
-            if (marker) {
-                map.removeLayer(marker);
+    
+    // Object to store markers by their ID
+    var markers = {};
+    
+    // Function to fetch and display all existing locations
+    function fetchAllLocations() {
+        $.get('/get_all_locations', function(data) {
+            data.locations.forEach(function(loc) {
+                var lat = parseFloat(loc.latitude);
+                var lon = parseFloat(loc.longitude);
+                var id = loc.id;
+                var name = loc.name;
+                var timestamp = new Date(loc.timestamp).toLocaleString();
+                
+                // Create a marker and add it to the map
+                var marker = L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`<b>${name}</b><br>Last Updated: ${timestamp}`);
+                
+                // Store the marker with its ID
+                markers[id] = marker;
+            });
+            
+            // Adjust the map view to fit all markers
+            var group = new L.featureGroup(Object.values(markers));
+            if (group.getLayers().length > 0) {
+                map.fitBounds(group.getBounds().pad(0.5));
             }
-            marker = L.marker([lat, lon]).addTo(map);
         });
     }
-
-    // Fetch the latest location when the page loads
-    fetchLatestLocation();
-
+    
+    // Fetch all locations when the page loads
+    fetchAllLocations();
+    
     // Listen for 'new_location' events from the server
     socket.on('new_location', function(data) {
         console.log(data);
-        if (marker) {
-            map.removeLayer(marker);
+        var id = data.id;
+        var lat = data.lat;
+        var lon = data.lon;
+        var name = data.name;
+        var timestamp = new Date(data.timestamp).toLocaleString();
+        var duration = data.duration;
+        
+        if (markers[id]) {
+            // Update existing marker's position and popup
+            markers[id].setLatLng([lat, lon]);
+            markers[id].setPopupContent(`<b>${name}</b><br>Last Updated: ${timestamp}`);
+        } else {
+            // Create a new marker if it doesn't exist
+            var marker = L.marker([lat, lon]).addTo(map)
+                .bindPopup(`<b>${name}</b><br>Last Updated: ${timestamp}`);
+            markers[id] = marker;
         }
-        marker = L.marker([data.lat, data.lon]).addTo(map);
-        map.setView([data.lat, data.lon], 17);
-
-        // Update the duration in the HTML
-        $('#duration').text('Distance from home: ' + data.duration);
+        
+        // Optionally, adjust the map view
+        map.setView([lat, lon], 17);
+        
+        // Update the duration in the HTML (this will show the last updated duration)
+        $('#duration').text(`Distance from home: ${duration}`);
     });
-
-    // Send notification button click event
-    $('#sendNotification').click(function() {
-        $.post('/send_notification', function(data) {
-            console.log(data.status);
+    
+    // Function to send location updates
+    function sendLocationUpdate(name) {
+        // For demonstration purposes, generate random coordinates
+        // Replace this with actual data as needed
+        var randomLat = (Math.random() * 180 - 90).toFixed(6);
+        var randomLon = (Math.random() * 360 - 180).toFixed(6);
+        
+        $.ajax({
+            url: '/update_location',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                'name': name,
+                'latitude': parseFloat(randomLat),
+                'longitude': parseFloat(randomLon)
+            }),
+            success: function(response) {
+                console.log(response.status);
+            },
+            error: function(xhr) {
+                console.error(xhr.responseJSON.message);
+            }
         });
+    }
+    
+    // Send notification button click events
+    $('#sendNotification').click(function() {
+        sendLocationUpdate("Logan");
+    });
+    
+    $('#sendNotification2').click(function() {
+        sendLocationUpdate("Alice"); // Example for a second user
     });
 </script>
 
