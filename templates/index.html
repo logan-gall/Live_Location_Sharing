@@ -5,7 +5,7 @@
     <title>Location Tracker</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         #map-container {
@@ -61,20 +61,20 @@
 
 <script>
     // Initialize Socket.IO
-    var socket = io.connect('https://' + document.domain + ':' + location.port);
-    
+    var socket = io.connect('http://' + document.domain + ':' + location.port); // Use 'https' if deploying over HTTPS
+
     // Initialize the map
     var map = L.map('map').setView([0, 0], 2); // Default view
-    
+
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 20,
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
-    
+
     // Object to store markers by their ID
     var markers = {};
-    
+
     // Function to fetch and display all existing locations
     function fetchAllLocations() {
         $.get('/get_all_locations', function(data) {
@@ -84,26 +84,28 @@
                 var id = loc.id;
                 var name = loc.name;
                 var timestamp = new Date(loc.timestamp).toLocaleString();
-                
+
                 // Create a marker and add it to the map
                 var marker = L.marker([lat, lon]).addTo(map)
                     .bindPopup(`<b>${name}</b><br>Last Updated: ${timestamp}`);
-                
+
                 // Store the marker with its ID
                 markers[id] = marker;
             });
-            
+
             // Adjust the map view to fit all markers
             var group = new L.featureGroup(Object.values(markers));
             if (group.getLayers().length > 0) {
                 map.fitBounds(group.getBounds().pad(0.5));
             }
+        }).fail(function() {
+            console.error("Failed to fetch all locations.");
         });
     }
-    
+
     // Fetch all locations when the page loads
     fetchAllLocations();
-    
+
     // Listen for 'new_location' events from the server
     socket.on('new_location', function(data) {
         console.log(data);
@@ -113,7 +115,7 @@
         var name = data.name;
         var timestamp = new Date(data.timestamp).toLocaleString();
         var duration = data.duration;
-        
+
         if (markers[id]) {
             // Update existing marker's position and popup
             markers[id].setLatLng([lat, lon]);
@@ -124,44 +126,65 @@
                 .bindPopup(`<b>${name}</b><br>Last Updated: ${timestamp}`);
             markers[id] = marker;
         }
-        
+
         // Optionally, adjust the map view
         map.setView([lat, lon], 17);
-        
+
         // Update the duration in the HTML (this will show the last updated duration)
         $('#duration').text(`Distance from home: ${duration}`);
     });
-    
+
     // Function to send location updates
     function sendLocationUpdate(name) {
-        // For demonstration purposes, generate random coordinates
-        // Replace this with actual data as needed
-        var randomLat = (Math.random() * 180 - 90).toFixed(6);
-        var randomLon = (Math.random() * 360 - 180).toFixed(6);
-        
+        // Prompt the user for latitude and longitude
+        var latitude = prompt("Enter latitude:", "44.987303");
+        var longitude = prompt("Enter longitude:", "-93.221375");
+
+        if (latitude === null || longitude === null) {
+            alert("Update cancelled.");
+            return;
+        }
+
+        // Validate the inputs
+        latitude = parseFloat(latitude);
+        longitude = parseFloat(longitude);
+        if (isNaN(latitude) || isNaN(longitude)) {
+            alert("Invalid latitude or longitude.");
+            return;
+        }
+
         $.ajax({
             url: '/update_location',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
                 'name': name,
-                'latitude': parseFloat(randomLat),
-                'longitude': parseFloat(randomLon)
+                'latitude': latitude,
+                'longitude': longitude
             }),
             success: function(response) {
                 console.log(response.status);
+                if (response.status !== 'success') {
+                    alert("Update failed: " + response.message);
+                }
             },
             error: function(xhr) {
-                console.error(xhr.responseJSON.message);
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    console.error(xhr.responseJSON.message);
+                    alert("Error: " + xhr.responseJSON.message);
+                } else {
+                    console.error("An unknown error occurred.");
+                    alert("An unknown error occurred.");
+                }
             }
         });
     }
-    
+
     // Send notification button click events
     $('#sendNotification').click(function() {
         sendLocationUpdate("Logan");
     });
-    
+
     $('#sendNotification2').click(function() {
         sendLocationUpdate("Alice"); // Example for a second user
     });
