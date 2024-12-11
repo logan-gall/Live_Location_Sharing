@@ -1,3 +1,6 @@
 Flask
 flask-socketio
 requests
+flask-sqlalchemy
+psycopg2-binary
+eventlet
