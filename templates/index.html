@@ -3,61 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <title>Location Tracker</title>
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Font Awesome for Check Mark Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Polyline Decoder Library -->
+    <script src="https://unpkg.com/@mapbox/polyline@1.1.1/src/polyline.js"></script>
     <style>
+        /* -----------------------------
+           Layout and Container Styling
+           ----------------------------- */
+        
+        /* Container for the entire map and form */
         #map-container {
-            position: relative;  /* Container for map and form */
-            height: 100vh;
-            width: 100vw;
+            position: relative;  /* Allows absolute positioning of child elements */
+            height: 100vh;       /* Full viewport height */
+            width: 100vw;        /* Full viewport width */
         }
+
+        /* Styling for the Leaflet map */
         #map { 
-            height: 100%; 
-            width: 100%; 
+            height: 100%;   /* Map takes full height of the container */
+            width: 100%;    /* Map takes full width of the container */
         }
+
+        /* Styling for the form container */
         .form-container {
-            position: absolute;
-            top: 10px;
-            left: 50px;
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            z-index: 1000;  /* Ensure it's above the map */
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            position: absolute;                    /* Positioned relative to #map-container */
+            top: 10px;                             /* 10px from the top */
+            left: 50px;                            /* 50px from the left */
+            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
+            padding: 15px;                         /* Internal padding */
+            border-radius: 8px;                    /* Rounded corners */
+            z-index: 1000;                         /* Ensures the form is above the map */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3); /* Subtle shadow for depth */
         }
+
+        /* Heading styles within the form */
+        .form-container h2 {
+            margin-top: 0;                         /* Removes default top margin */
+            margin-bottom: 10px;                   /* Adds space below the heading */
+            font-size: 18px;                       /* Sets font size */
+            color: #333;                           /* Dark gray text color */
+        }
+
+        .form-container h3 {
+            margin-top: 0;                         /* Removes default top margin */
+            margin-bottom: 10px;                   /* Adds space below the heading */
+            font-size: 16px;                       /* Sets font size */
+            color: #333;                           /* Dark gray text color */
+        }
+
+        /* Input field styling within the form */
         .form-container input {
-            margin-bottom: 10px;
-            padding: 8px;
-            width: 200px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            margin-bottom: 10px;                   /* Space below each input */
+            padding: 8px;                          /* Internal padding for better clickability */
+            width: 200px;                          /* Fixed width */
+            border: 1px solid #ccc;                /* Light gray border */
+            border-radius: 4px;                    /* Slightly rounded corners */
         }
+
+        /* Update Location button styling */
         .form-container button {
-            padding: 10px 15px;
-            background-color: #E53671;
-            border: none;
-            color: white;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
+            padding: 10px 15px;                    /* Vertical and horizontal padding */
+            background-color: #E53671;             /* Pink background color */
+            border: none;                          /* Removes default border */
+            color: white;                          /* White text color */
+            font-size: 16px;                       /* Font size */
+            border-radius: 5px;                    /* Rounded corners */
+            cursor: pointer;                       /* Pointer cursor on hover */
+            position: relative;                    /* For positioning the check mark icon */
+            margin-top: 10px;                      /* Space above the button */
         }
+
+        /* Hover effect for the Update Location button */
         .form-container button:hover {
-            background-color: #c22e60;
+            background-color: #c22e60;             /* Darker pink on hover */
         }
+
+        /* Check Mark Icon Styling */
+        .check-mark {
+            position: absolute;                    /* Positioned relative to the button */
+            top: 50%;                              /* Vertically centered */
+            right: -25px;                          /* Positioned to the right of the button */
+            transform: translateY(-50%);           /* Adjusts for perfect vertical centering */
+            color: green;                          /* Green color to indicate success */
+            font-size: 20px;                       /* Size of the check mark */
+            display: none;                         /* Hidden by default */
+            opacity: 0;                            /* Fully transparent initially */
+            transition: opacity 0.5s ease-in-out;  /* Smooth fade-in and fade-out */
+        }
+
+        /* Display Text Styling */
         #duration {
-            position: absolute;
-            top: 10px;
-            right: 50px;
-            background-color: #E53671;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            text-align: center;
-            font-size: 20px;
-            border-radius: 10px;
-            z-index: 1000;
+            position: absolute;                    /* Positioned relative to #map-container */
+            top: 10px;                             /* 10px from the top */
+            right: 50px;                           /* 50px from the right */
+            background-color: #E53671;             /* Pink background color */
+            border: none;                          /* No border */
+            color: white;                          /* White text color */
+            padding: 10px 20px;                    /* Padding for better readability */
+            text-align: center;                    /* Centered text */
+            font-size: 20px;                       /* Font size */
+            border-radius: 10px;                   /* Rounded corners */
+            z-index: 1000;                         /* Ensures it's above the map */
+        }
+
+        /* Polyline (Route) Styling */
+        .route-polyline {
+            color: green;                          /* Green color for the route */
+            weight: 4;                             /* Thickness of the line */
+            opacity: 0.7;                          /* Semi-transparent */
+        }
+
+        /* Ping Logan's Location Button Container Styling */
+        .ping-container {
+            position: absolute;                    /* Positioned relative to #map-container */
+            top: 60px;                             /* Positioned below the duration div */
+            right: 50px;                           /* 50px from the right */
+            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
+            padding: 10px 15px;                    /* Internal padding */
+            border-radius: 8px;                    /* Rounded corners */
+            z-index: 1000;                         /* Ensures it's above the map */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3); /* Subtle shadow for depth */
+            display: flex;                         /* Flexbox layout for alignment */
+            align-items: center;                   /* Vertically centers items */
+        }
+
+        /* Ping Button Styling */
+        .ping-container button {
+            padding: 10px 15px;                    /* Vertical and horizontal padding */
+            background-color: #E53671;             /* Pink background color (same as Update button) */
+            border: none;                          /* Removes default border */
+            color: white;                          /* White text color */
+            font-size: 14px;                       /* Font size */
+            border-radius: 5px;                    /* Rounded corners */
+            cursor: pointer;                       /* Pointer cursor on hover */
+            position: relative;                    /* For positioning the check mark icon */
+        }
+
+        /* Hover effect for the Ping button */
+        .ping-container button:hover {
+            background-color: #c22e60;             /* Darker pink on hover */
+        }
+
+        /* Check Mark Icon Styling for Ping Button */
+        .ping-check-mark {
+            margin-left: 10px;                     /* Space to the left of the check mark */
+            color: green;                          /* Green color to indicate success */
+            font-size: 18px;                       /* Size of the check mark */
+            display: none;                         /* Hidden by default */
+            opacity: 0;                            /* Fully transparent initially */
+            transition: opacity 0.5s ease-in-out;  /* Smooth fade-in and fade-out */
+        }
+
+        /* Custom Marker Styles */
+        .custom-marker {
+            width: 24px;                           /* Width of the marker */
+            height: 24px;                          /* Height of the marker */
+            border-radius: 50%;                    /* Makes the marker circular */
+            /* Removed the outer white ring by eliminating the border or stroke */
+            box-shadow: 0 0 3px rgba(0,0,0,0.6);  /* Subtle shadow for depth */
+            background-color: red;                 /* Default color, will be overridden */
         }
     </style>
 </head>
@@ -65,142 +178,436 @@
 <body>
 
 <div id="map-container">
+    <!-- Leaflet Map Container -->
     <div id="map"></div>
+    
     <!-- Form to input name, latitude, and longitude -->
     <div class="form-container">
+        <!-- Heading for the application -->
+        <h2>WebGIS Demo: Live Location Sharing</h2>
+        
+        <!-- Subheading for updating location -->
         <h3>Update Location</h3>
+        
+        <!-- Input field for the user's name -->
         <input type="text" id="nameInput" placeholder="Enter Name" required /><br/>
-        <input type="number" step="any" id="latitudeInput" placeholder="Enter Latitude" required /><br/>
-        <input type="number" step="any" id="longitudeInput" placeholder="Enter Longitude" required /><br/>
-        <button id="updateButton">Update Location</button>
+        
+        <!-- Read-only input field for latitude (autofilled by map click) -->
+        <input type="text" id="latitudeInput" placeholder="Latitude" readonly /><br/>
+        
+        <!-- Read-only input field for longitude (autofilled by map click) -->
+        <input type="text" id="longitudeInput" placeholder="Longitude" readonly /><br/>
+        
+        <!-- Update Location Button -->
+        <button id="updateButton">
+            Update Location
+            <!-- Check Mark Icon that appears upon successful update -->
+            <i class="fas fa-check check-mark" id="checkMark"></i>
+        </button>
+        
+        <!-- Instructional text guiding the user to select a location on the map -->
+        <p id="instruction" style="font-size: 12px; color: #555;">Click on the map to select your location.</p>
     </div>
-    <div id="duration">Distance from home: N/A</div>
+    
+    <!-- Display div for showing the duration from user to Blegen -->
+    <div id="duration">John Doe's time from Blegen: N/A</div> <!-- Will be updated dynamically -->
+    
+    <!-- Container for Ping Logan's Location Button -->
+    <div class="ping-container">
+        <!-- Ping Logan's Location Button -->
+        <button id="pingLoganButton">Ping Logan's Location</button>
+        <!-- Check Mark Icon that appears upon successful ping -->
+        <i class="fas fa-check ping-check-mark" id="pingCheckMark"></i>
+    </div>
 </div>
 
 <script>
+    // **1. Update Home Coordinates**
+    // New Home Coordinates (Blegen)
+    var HOME_LAT = 44.971808;   // Latitude for Blegen
+    var HOME_LON = -93.243360;  // Longitude for Blegen
+
     // Initialize Socket.IO
     var socket = io.connect('http://' + document.domain + ':' + location.port); // Use 'https' if deploying over HTTPS
 
-    // Initialize the map
-    var map = L.map('map').setView([0, 0], 2); // Default view
+    // Initialize the Leaflet map centered at the new home location
+    var map = L.map('map').setView([HOME_LAT, HOME_LON], 13); // Zoom level set to 13 for city view
 
-    // Add OpenStreetMap tiles
+    // Add OpenStreetMap tiles to the map for rendering
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 20,
-        attribution: '© OpenStreetMap contributors'
+        maxZoom: 20,                                       // Maximum zoom level
+        attribution: '© OpenStreetMap contributors'        // Attribution text
     }).addTo(map);
 
-    // Object to store markers by their ID
+    // Object to store markers indexed by their unique ID
     var markers = {};
 
-    // Function to fetch and display all existing locations
+    // Variable to store the currently selected marker (for manual selection)
+    var selectedMarker = null;
+
+    // Variable to store the currently displayed polyline (route)
+    var currentPolyline = null;
+
+    /**
+     * Generate a unique color based on the ID using the HSL color model.
+     * This ensures each marker has a distinct color.
+     * @param {number|string} id - The unique identifier from the database.
+     * @returns {string} - The generated color in HSL format.
+     */
+    function getColorById(id) {
+        // Ensure ID is a number for consistent color generation
+        var numericId = typeof id === 'number' ? id : hashCode(id);
+        var hue = (numericId * 137.508) % 360; // Golden angle approximation for uniform color distribution
+        return `hsl(${hue}, 70%, 50%)`;       // Saturation 70%, Lightness 50%
+    }
+
+    /**
+     * Hash a string to a numeric value.
+     * Useful for generating unique colors based on string IDs.
+     * @param {string} str - The string to hash.
+     * @returns {number} - The hashed numeric value.
+     */
+    function hashCode(str) {
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) {
+            var char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return Math.abs(hash);
+    }
+
+    /**
+     * Create a custom Leaflet icon with a unique color based on the ID.
+     * Utilizes SVG for scalable and customizable marker icons.
+     * @param {number|string} id - The unique identifier from the database.
+     * @returns {L.Icon} - The custom Leaflet icon.
+     */
+    function getMarkerIcon(id) {
+        var color = getColorById(id); // Get a unique color based on the ID
+        var svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                <!-- Outer circle with unique color, no stroke for cleaner look -->
+                <circle cx="12" cy="12" r="10" fill="${color}" />
+                <!-- Inner white circle for contrast -->
+                <circle cx="12" cy="12" r="5" fill="#ffffff"/>
+            </svg>
+        `;
+        // Encode the SVG for use in a data URI
+        var svgData = encodeURIComponent(svg).replace(/'/g, '%27').replace(/"/g, '%22');
+        var dataUri = `data:image/svg+xml;charset=UTF-8,${svgData}`;
+        
+        // Return a Leaflet icon using the SVG data URI
+        return L.icon({
+            iconUrl: dataUri,        // URL to the icon image
+            iconSize: [24, 24],      // Size of the icon
+            iconAnchor: [12, 12],    // Point of the icon which will correspond to marker's location
+            popupAnchor: [0, -12]    // Point from which the popup should open relative to the iconAnchor
+        });
+    }
+
+    /**
+     * Fetch all locations from the server and update markers on the map.
+     * Called initially and periodically to keep the map updated.
+     */
     function fetchAllLocations() {
-        $.get('/get_all_locations', function(data) {
-            data.locations.forEach(function(loc) {
-                var lat = parseFloat(loc.latitude);
-                var lon = parseFloat(loc.longitude);
-                var id = loc.id;
-                var name = loc.name;
-                var timestamp = new Date(loc.timestamp).toLocaleString();
+        $.get('/get_all_locations', function(data) {  // AJAX GET request to fetch all locations
+            var currentIds = new Set();                  // Set to keep track of existing marker IDs
 
-                // Create a marker and add it to the map
-                var marker = L.marker([lat, lon]).addTo(map)
-                    .bindPopup(`<b>${name}</b><br>Last Updated: ${timestamp}`);
+            data.locations.forEach(function(loc) {        // Iterate through each location received
+                let lat = parseFloat(loc.latitude);       // Parse latitude as float
+                let lon = parseFloat(loc.longitude);      // Parse longitude as float
+                let id = loc.id;                          // Unique ID of the location
+                let name = loc.name;                      // Name of the user
+                let timestamp = new Date(loc.timestamp).toLocaleString(); // Format timestamp
 
-                // Store the marker with its ID
-                markers[id] = marker;
+                currentIds.add(id);                        // Add ID to the set of current IDs
+
+                if (markers[id]) {                         // If marker already exists
+                    // Update existing marker's position and popup content
+                    markers[id].setLatLng([lat, lon]);
+                    markers[id].setPopupContent(`<b>${name}</b><br>Last Updated: ${timestamp}`);
+                } else {
+                    // Create a new marker with a unique color
+                    let marker = L.marker([lat, lon], {icon: getMarkerIcon(id)}).addTo(map)
+                        .bindPopup(`<b>${name}</b><br>Last Updated: ${timestamp}`);
+                    
+                    // Attach click listener to display time from Blegen and route
+                    marker.on('click', function(e) {
+                        var currentLatLng = e.target.getLatLng(); // Get current coordinates of the marker
+                        fetchAndDisplayRoute(currentLatLng.lat, currentLatLng.lng, name); // Fetch and display route
+                        e.target.openPopup(); // Explicitly open the popup
+                    });
+
+                    markers[id] = marker; // Store the marker in the markers object
+                }
             });
 
-            // Adjust the map view to fit all markers
-            var group = new L.featureGroup(Object.values(markers));
-            if (group.getLayers().length > 0) {
-                map.fitBounds(group.getBounds().pad(0.5));
-            }
-        }).fail(function() {
+            // Remove markers that no longer exist in the database
+            Object.keys(markers).forEach(function(id) {
+                if (!currentIds.has(parseInt(id))) {      // If the ID is not in the current set
+                    map.removeLayer(markers[id]);         // Remove the marker from the map
+                    delete markers[id];                   // Delete the marker from the markers object
+                }
+            });
+
+        }).fail(function() {                              // Handle AJAX request failure
             console.error("Failed to fetch all locations.");
         });
     }
 
-    // Fetch all locations when the page loads
+    /**
+     * Fetch the route polyline and time from the server and display it on the map.
+     * @param {number} lat - Latitude of the origin.
+     * @param {number} lon - Longitude of the origin.
+     * @param {string} name - Name of the user (for time display).
+     */
+    function fetchAndDisplayRoute(lat, lon, name) {
+        // Make AJAX GET request to /get_route with origin coordinates
+        $.ajax({
+            url: '/get_route',
+            type: 'GET',
+            data: {
+                lat: lat,    // Latitude of the user's location
+                lon: lon     // Longitude of the user's location
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Decode the polyline using polyline.js library
+                    var decodedPolyline = polyline.decode(response.polyline);
+                    // Convert decoded polyline to LatLng objects
+                    var latlngs = decodedPolyline.map(function(point) {
+                        return [point[0], point[1]];
+                    });
+
+                    // Remove existing polyline if any to avoid clutter
+                    if (currentPolyline) {
+                        map.removeLayer(currentPolyline);
+                    }
+
+                    // Add the new polyline to the map with green color
+                    currentPolyline = L.polyline(latlngs, {color: 'green', weight: 4, opacity: 0.7}).addTo(map);
+
+                    // Update the duration in the HTML with the new display text
+                    $('#duration').text(`${name}'s time from Blegen: ${response.duration}`);
+                } else {
+                    console.error("Error fetching route:", response.message);
+                }
+            },
+            error: function(xhr) {                            // Handle AJAX request failure
+                console.error("Failed to fetch route.");
+            }
+        });
+    }
+
+    // Initial fetch of all locations when the page loads
     fetchAllLocations();
 
-    // Listen for 'new_location' events from the server
+    // Periodically fetch and update locations every 5 seconds to keep the map current
+    setInterval(fetchAllLocations, 5000); // 5000 milliseconds = 5 seconds
+
+    /**
+     * Listen for 'new_location' events from the server to update or add markers in real-time.
+     * This allows for real-time updates without the need to refresh the page.
+     */
     socket.on('new_location', function(data) {
-        console.log(data);
-        var id = data.id;
-        var lat = data.lat;
-        var lon = data.lon;
-        var name = data.name;
-        var timestamp = new Date(data.timestamp).toLocaleString();
-        var duration = data.duration;
+        console.log(data); // Log the received data for debugging
+        var id = data.id;   // Unique ID of the location
+        var lat = data.lat; // Latitude of the user's location
+        var lon = data.lon; // Longitude of the user's location
+        var name = data.name; // Name of the user
+        var timestamp = new Date(data.timestamp).toLocaleString(); // Format timestamp
+        var duration = data.duration; // Duration from user to Blegen
 
         if (markers[id]) {
-            // Update existing marker's position and popup
+            // Update existing marker's position and popup content
             markers[id].setLatLng([lat, lon]);
             markers[id].setPopupContent(`<b>${name}</b><br>Last Updated: ${timestamp}`);
+            // Update the icon to reflect any potential changes based on new data
+            markers[id].setIcon(getMarkerIcon(id));
+
+            // **Important Fix:** Update the click listener to use the current lat and lon and open the popup
+            markers[id].off('click'); // Remove existing click listeners to prevent multiple bindings
+            markers[id].on('click', function(e) {
+                var currentLatLng = e.target.getLatLng(); // Get current coordinates of the marker
+                fetchAndDisplayRoute(currentLatLng.lat, currentLatLng.lng, name); // Fetch and display route
+                e.target.openPopup(); // Explicitly open the popup
+            });
         } else {
-            // Create a new marker if it doesn't exist
-            var marker = L.marker([lat, lon]).addTo(map)
+            // Create a new marker with a unique color if it doesn't exist
+            var marker = L.marker([lat, lon], {icon: getMarkerIcon(id)}).addTo(map)
                 .bindPopup(`<b>${name}</b><br>Last Updated: ${timestamp}`);
-            markers[id] = marker;
+            
+            // Attach click listener to display time from Blegen and route
+            marker.on('click', function(e) {
+                var currentLatLng = e.target.getLatLng(); // Get current coordinates of the marker
+                fetchAndDisplayRoute(currentLatLng.lat, currentLatLng.lng, name); // Fetch and display route
+                e.target.openPopup(); // Explicitly open the popup
+            });
+
+            markers[id] = marker; // Store the new marker in the markers object
         }
 
-        // Optionally, adjust the map view
-        map.setView([lat, lon], 17);
-
-        // Update the duration in the HTML (this will show the last updated duration)
-        $('#duration').text(`Distance from home: ${duration}`);
+        // Update the duration in the HTML with the new display text
+        $('#duration').text(`${name}'s time from Blegen: ${duration}`);
     });
 
-    // Function to send location updates
+    /**
+     * Send location updates to the server via AJAX.
+     * @param {string} name - User's name.
+     * @param {number} latitude - Selected latitude.
+     * @param {number} longitude - Selected longitude.
+     */
     function sendLocationUpdate(name, latitude, longitude) {
         $.ajax({
             url: '/update_location',
             type: 'POST',
-            contentType: 'application/json',
+            contentType: 'application/json', // Send data as JSON
             data: JSON.stringify({
-                'name': name,
-                'latitude': parseFloat(latitude),
-                'longitude': parseFloat(longitude)
+                'name': name,             // User's name
+                'latitude': parseFloat(latitude),  // User's latitude as float
+                'longitude': parseFloat(longitude) // User's longitude as float
             }),
             success: function(response) {
-                console.log(response.status);
+                console.log(response.status); // Log the response status
                 if (response.status !== 'success') {
-                    alert("Update failed: " + response.message);
+                    alert("Update failed: " + response.message); // Alert the user if update failed
+                } else {
+                    // Display the check mark icon to indicate success
+                    $('#checkMark').css('display', 'inline').css('opacity', '1');
+                    // Fade out the check mark after 1.5 seconds for a smooth user experience
+                    setTimeout(function() {
+                        $('#checkMark').fadeOut(500);
+                    }, 1500);
+
+                    // Remove the selected marker from the map if it exists
+                    if (selectedMarker) {
+                        map.removeLayer(selectedMarker);
+                        selectedMarker = null;
+                    }
+
+                    // Remove existing polyline (route) from the map if any
+                    if (currentPolyline) {
+                        map.removeLayer(currentPolyline);
+                        currentPolyline = null;
+                    }
                 }
             },
-            error: function(xhr) {
+            error: function(xhr) {                        // Handle AJAX request failure
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     console.error(xhr.responseJSON.message);
-                    alert("Error: " + xhr.responseJSON.message);
+                    alert("Error: " + xhr.responseJSON.message); // Alert the user with the error message
                 } else {
                     console.error("An unknown error occurred.");
-                    alert("An unknown error occurred.");
+                    alert("An unknown error occurred.");          // Generic error alert
                 }
             }
         });
     }
 
-    // Handle the Update Location button click
+    /**
+     * Handle the Update Location button click event.
+     * Gathers input data, validates it, and sends it to the server.
+     */
     $('#updateButton').click(function() {
-        var name = $('#nameInput').val().trim();
-        var latitude = $('#latitudeInput').val().trim();
-        var longitude = $('#longitudeInput').val().trim();
+        var name = $('#nameInput').val().trim();          // Get and trim the user's name
+        var latitude = $('#latitudeInput').val().trim();  // Get and trim the latitude
+        var longitude = $('#longitudeInput').val().trim(); // Get and trim the longitude
 
-        // Basic validation
+        // Basic validation to ensure all fields are filled
         if (name === "" || latitude === "" || longitude === "") {
-            alert("Please fill in all fields.");
+            alert("Please enter your name and select a location on the map."); // Alert if any field is empty
+            return; // Exit the function early
+        }
+
+        // Further validation to ensure latitude and longitude are valid numbers and within acceptable ranges
+        latitude = parseFloat(latitude);
+        longitude = parseFloat(longitude);
+        if (isNaN(latitude) || isNaN(longitude)) {
+            alert("Invalid latitude or longitude."); // Alert if parsing fails
+            return;
+        }
+        if (latitude < -90 || latitude > 90) {
+            alert("Latitude must be between -90 and 90."); // Alert if latitude is out of bounds
+            return;
+        }
+        if (longitude < -180 || longitude > 180) {
+            alert("Longitude must be between -180 and 180."); // Alert if longitude is out of bounds
             return;
         }
 
-        // Further validation can be added here (e.g., valid latitude and longitude ranges)
-
+        // Send the validated location data to the server
         sendLocationUpdate(name, latitude, longitude);
 
-        // Clear the input fields after sending
+        // Clear the input fields after sending to prepare for the next entry
         $('#nameInput').val('');
         $('#latitudeInput').val('');
         $('#longitudeInput').val('');
+    });
+
+    /**
+     * Handle map clicks to autofill latitude and longitude input fields.
+     * Also places a temporary marker to indicate the selected location.
+     */
+    map.on('click', function(e) {
+        var lat = e.latlng.lat.toFixed(6);  // Limit latitude to 6 decimal places for consistency
+        var lon = e.latlng.lng.toFixed(6);  // Limit longitude to 6 decimal places for consistency
+        $('#latitudeInput').val(lat);       // Autofill the latitude input field
+        $('#longitudeInput').val(lon);      // Autofill the longitude input field
+
+        // Manage the selected marker by removing the previous one if it exists
+        if (selectedMarker) {
+            map.removeLayer(selectedMarker);
+        }
+
+        // Create a new selected marker with a distinct icon or color
+        selectedMarker = L.marker([lat, lon], {
+            draggable: false,                    // Marker is not draggable
+            icon: getMarkerIcon('selected')      // Use a unique identifier for the selected marker's icon
+        }).addTo(map)
+          .bindPopup("Selected Location")        // Bind a popup to the marker
+          .openPopup();                          // Automatically open the popup upon creation
+    });
+
+    /**
+     * Handle Ping Logan's Location button click event.
+     * Sends a notification to Logan via the server.
+     */
+    $('#pingLoganButton').click(function() {
+        // Define the name to ping (Logan)
+        var nameToPing = "Logan";
+
+        // Send AJAX POST request to /send_notification with the name "Logan"
+        $.ajax({
+            url: '/send_notification',
+            type: 'POST',
+            contentType: 'application/json', // Send data as JSON
+            data: JSON.stringify({
+                'name': nameToPing             // Name of the user to send the notification to
+            }),
+            success: function(response) {
+                console.log(response.status); // Log the response status
+                if (response.status !== 'success') {
+                    alert("Ping failed: " + response.message); // Alert if ping failed
+                } else {
+                    // Display the check mark icon next to the Ping button to indicate success
+                    $('#pingCheckMark').css('display', 'inline').css('opacity', '1');
+                    // Fade out the check mark after 1.5 seconds for a smooth user experience
+                    setTimeout(function() {
+                        $('#pingCheckMark').fadeOut(500);
+                    }, 1500);
+                }
+            },
+            error: function(xhr) {                        // Handle AJAX request failure
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    console.error(xhr.responseJSON.message);
+                    alert("Error: " + xhr.responseJSON.message); // Alert with the specific error message
+                } else {
+                    console.error("An unknown error occurred.");
+                    alert("An unknown error occurred.");          // Generic error alert
+                }
+            }
+        });
     });
 </script>
 

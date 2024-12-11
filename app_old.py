@@ -50,6 +50,7 @@ def send_notification():
             print(f"Failed to send notification. Status code: {response.status_code}")
 
     # Replace these with your Pushover User Key and API Token
+    GOOGLE_API_KEY = "AIzaSyBIZt7GRemJ5z5zRcXMDks7hi3GvXXiwKI"
     USER_KEY = "updpmtd33jnw8jjweqm6f5p526aqam"
     APP_TOKEN = "azfqtfbaypgs7v863jt752gdu5y93e"
     MESSAGE = "Live Location"
