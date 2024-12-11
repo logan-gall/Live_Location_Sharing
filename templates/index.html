@@ -152,6 +152,25 @@
         .ping-container button:hover {
             background-color: #c22e60;             /* Darker pink on hover */
         }
+		
+		/* Link Box Styling */
+        .link-box {
+            position: absolute;
+            bottom: 20px;          /* 20px from the bottom of the screen */
+            right: 20px;           /* 20px from the right of the screen */
+            background-color: #E53671;  /* Pink background color */
+            padding: 10px 20px;     /* Padding inside the box */
+            border-radius: 8px;     /* Rounded corners */
+            color: white;           /* White text */
+            font-size: 16px;        /* Font size */
+            text-decoration: none;  /* Remove underline */
+            z-index: 1000;          /* Make sure it appears above other content */
+        }
+
+        /* Hover effect for the link box */
+        .link-box:hover {
+            background-color: #c22e60;  /* Darker pink on hover */
+        }
 
         /* Check Mark Icon Styling for Ping Button */
         .ping-check-mark {
@@ -610,6 +629,8 @@
         });
     });
 </script>
+
+<a href="https://z.umn.edu/WebLocationShare" class="link-box" target="_blank">z.umn.edu/WebLocationShare</a>
 
 </body>
 </html>
