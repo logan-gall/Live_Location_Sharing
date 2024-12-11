@@ -9,7 +9,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         #map-container {
-            position: relative;  /* Container for map and buttons */
+            position: relative;  /* Container for map and form */
             height: 100vh;
             width: 100vw;
         }
@@ -17,21 +17,34 @@
             height: 100%; 
             width: 100%; 
         }
-        .updateButton {
+        .form-container {
             position: absolute;
+            top: 10px;
             left: 50px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;  /* Ensure it's above the map */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .form-container input {
+            margin-bottom: 10px;
+            padding: 8px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .form-container button {
+            padding: 10px 15px;
             background-color: #E53671;
             border: none;
             color: white;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 18px;
-            border-radius: 10px;  /* Rounded shape */
+            font-size: 16px;
+            border-radius: 5px;
             cursor: pointer;
-            z-index: 1000;  /* Ensure it's above the map */
-            margin-top: 10px;
+        }
+        .form-container button:hover {
+            background-color: #c22e60;
         }
         #duration {
             position: absolute;
@@ -53,9 +66,14 @@
 
 <div id="map-container">
     <div id="map"></div>
-    <!-- Buttons to update specific locations -->
-    <button id="sendNotification" class="updateButton">Update Logan's Location</button>
-    <button id="sendNotification2" class="updateButton" style="top: 75px;">Update Alice's Location</button>
+    <!-- Form to input name, latitude, and longitude -->
+    <div class="form-container">
+        <h3>Update Location</h3>
+        <input type="text" id="nameInput" placeholder="Enter Name" required /><br/>
+        <input type="number" step="any" id="latitudeInput" placeholder="Enter Latitude" required /><br/>
+        <input type="number" step="any" id="longitudeInput" placeholder="Enter Longitude" required /><br/>
+        <button id="updateButton">Update Location</button>
+    </div>
     <div id="duration">Distance from home: N/A</div>
 </div>
 
@@ -135,32 +153,15 @@
     });
 
     // Function to send location updates
-    function sendLocationUpdate(name) {
-        // Prompt the user for latitude and longitude
-        var latitude = prompt("Enter latitude:", "44.987303");
-        var longitude = prompt("Enter longitude:", "-93.221375");
-
-        if (latitude === null || longitude === null) {
-            alert("Update cancelled.");
-            return;
-        }
-
-        // Validate the inputs
-        latitude = parseFloat(latitude);
-        longitude = parseFloat(longitude);
-        if (isNaN(latitude) || isNaN(longitude)) {
-            alert("Invalid latitude or longitude.");
-            return;
-        }
-
+    function sendLocationUpdate(name, latitude, longitude) {
         $.ajax({
             url: '/update_location',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
                 'name': name,
-                'latitude': latitude,
-                'longitude': longitude
+                'latitude': parseFloat(latitude),
+                'longitude': parseFloat(longitude)
             }),
             success: function(response) {
                 console.log(response.status);
@@ -180,13 +181,26 @@
         });
     }
 
-    // Send notification button click events
-    $('#sendNotification').click(function() {
-        sendLocationUpdate("Logan");
-    });
+    // Handle the Update Location button click
+    $('#updateButton').click(function() {
+        var name = $('#nameInput').val().trim();
+        var latitude = $('#latitudeInput').val().trim();
+        var longitude = $('#longitudeInput').val().trim();
 
-    $('#sendNotification2').click(function() {
-        sendLocationUpdate("Alice"); // Example for a second user
+        // Basic validation
+        if (name === "" || latitude === "" || longitude === "") {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        // Further validation can be added here (e.g., valid latitude and longitude ranges)
+
+        sendLocationUpdate(name, latitude, longitude);
+
+        // Clear the input fields after sending
+        $('#nameInput').val('');
+        $('#latitudeInput').val('');
+        $('#longitudeInput').val('');
     });
 </script>
 
